@@ -5,6 +5,7 @@ var jwt = require('jsonwebtoken');
 const { TiledeskClient } = require('@tiledesk/tiledesk-client');
 const { TiledeskChatbotUtil } = require('@tiledesk/tiledesk-chatbot-util');
 const axios = require('axios');
+const { Elastic } = require('./search');
 
 const app = express();
 
@@ -12,6 +13,8 @@ app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({ extended: true , limit: '50mb'}));
 
 let db = new Map();
+
+const APP_ENDPOINT = 'https://tiledesk-formez-app.andreasponziell.repl.co';
 
 // Tiledesk Resolution-bot webhook endpoint
 app.post('/mytiledesk', (req, res) => {
@@ -33,11 +36,12 @@ app.post('/mytiledesk', (req, res) => {
     const message_id = req.body.payload.message._id;
     req.body.origin = origin;
     db.set(message_id + "-webhook-body", req.body);
+    console.log("***** DB:", db);
     API_URL = apiurlByOrigin(origin);
     console.log("Tiledesk endpoint: ", API_URL);
     const email = req.body.email;
     const fullname = req.body.name;
-    const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:true});
+    const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
     let message = {}
     tdclient.getWidgetSettings(function(err, result) {
       const users_available = result['user_available']
@@ -46,7 +50,7 @@ app.post('/mytiledesk', (req, res) => {
         availability = false;
       }
       if (availability) {
-        message['text'] = 'tdFrame:https://tiledesk-conversation-form-app.tiledesk.repl.co/apps/prechatform/' + req.body.payload.message._id + '\n* Ho cambiato idea';
+        message['text'] = `tdFrame:${APP_ENDPOINT}/apps/prechatform/${req.body.payload.message._id}\n* Ho cambiato idea`;
         console.log("message:", message);
         message['attributes'] = {
           hideTextReply: true,
@@ -58,7 +62,7 @@ app.post('/mytiledesk', (req, res) => {
       else {
         console.log("CLOSED");
         // message['text'] = 'tdFrame:https://tiledesk-conversation-form-app.tiledesk.repl.co/apps/ticket/' + server + '/' + tokenalias + '/' + req.body.payload.message._id + '\n* Ho cambiato idea';
-        message['text'] = 'tdFrame:https://tiledesk-conversation-form-app.tiledesk.repl.co/apps/ticket/' + req.body.payload.message._id + '\n* Ho cambiato idea';
+        message['text'] = `tdFrame:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
         console.log("message:", message);
         message['attributes'] = {
           hideTextReply: true,
@@ -254,15 +258,18 @@ app.get('/apps/ticket/:messageid', (req, res) => {
   <head>
   <script>
   </script>
-  <style> 
-  p {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
+  <style>
+  #form {
+    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:11px;color:#1a1a1a;font-weight:300;
   }
   td {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
+    width: 1%;white-space: nowrap;font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:11px;color:#1a1a1a;font-weight:300;
   }
-  input {
-    border: 1px solid #d9d9d9!important;border-radius: 5px;
+  .input_form {
+    width: 100%
+  }
+  textarea {
+    width: 100%
   }
   </style>
   </head>
@@ -270,16 +277,35 @@ app.get('/apps/ticket/:messageid', (req, res) => {
   <div id="form">
   <p style="text-align:center">Nessun operatore disponibile. Apriamo un ticket con il supporto?</p>
 <table>
-  <tr><td>Nome:</td><td><input type='text' id='nome' value=''/></td></tr>
-  <tr><td>Email:</td><td><input type='text' id='email' value=''/></td></tr>
+<tbody>
+  <tr>
+    <td>
+      <input class="input_form" type='text' id='nome' value=''/ placeholder='Nome'>
+    </td>
+    <td >
+      <input class="input_form" type='text' id='cognome' value=''/ placeholder='Cognome'>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <input  class="input_form" type='text' id='email' value='' placeholder='Email'>
+    </td>
+    <td >
+      <input  class="input_form" type='text' id='cellulare' value='' placeholder='Cellulare'>
+    </td>
+  </tr>
   <tr><td colspan="2">Descrivi il tuo problema:</td></tr>
-  <tr><td colspan="2"><textarea id='note' value=''/></textarea></td></tr>
-  <tr><td colspan="2"><br>Dichiaro di aver letto e di accettare i termini della Vostra <a href="https://tiledesk.com/privacy.html" target="_blank">privacy policy</a><input type='checkbox' id='privacy' value=''/></td></tr>
+  <tr>
+    <td colspan="2">
+      <textarea id='note' value=''/></textarea>
+    </td>
+  </tr>
+</tbody>
 </table>
-    
+    <label for="privacy">Ho letto e accetto i termini della Vostra <a href="https://tiledesk.com/privacy.html" target="_blank">privacy policy</a></label>
+    <input type='checkbox' id='privacy' value=''/>
     <input type='hidden' id='messageid' value='${messageid}'/>
-    
-    <p><input type='button' id='send_btn' value='Send'/></p>
+    <p style='text-align:center'><input type='button' id='send_btn' value='Crea Ticket'/></p>
 </div>
   <script>
     function sendData( data ) {
@@ -307,13 +333,17 @@ app.get('/apps/ticket/:messageid', (req, res) => {
     const btn = document.getElementById('send_btn');
     btn.addEventListener( 'click', function() {
       const email = document.getElementById('email');
+      const cellulare = document.getElementById('cellulare');
       const nome = document.getElementById('nome');
+      const cognome = document.getElementById('cognome');
       const note = document.getElementById('note');
       
       const messageid = document.getElementById('messageid');
       sendData( {
         email:email.value,
+        cellulare:cellulare.value,
         nome:nome.value,
+        cognome:cognome.value,
         note: note.value,
         messageid:messageid.value} );
     } )
@@ -371,7 +401,7 @@ app.post('/apps/ticket/create', (req, res) => {
   const origin = message_webhook_body.origin;
   API_URL = apiurlByOrigin(origin);
   console.log("Tiledesk endpoint: ", API_URL);
-  const tdclient = new TiledeskClient({project_id:projectId,token:rawJwtToken, APIURL: API_URL, APIKEY: "___", log:true});
+  const tdclient = new TiledeskClient({project_id:projectId,token:rawJwtToken, APIURL: API_URL, APIKEY: "___", log:false});
   
   /*
   const lead_id = request.lead._id;
@@ -450,6 +480,140 @@ function apiurlByOrigin(origin) {
   return API_URL;
 }
 
+app.get('/searchme', (req, res) => {
+  console.log('/searchme, query:', req.query['query']);
+  res.send("ok")
+});
+
+app.get('/search', (req, res) => {
+  console.log('/search, query:', req.query['query']);
+  const query = req.query['query']
+  // create the ticket
+  ticketapp_token = "aahfiudsbigshfdgiufhgisjhofshofdpgoiewurfu9845729483t9543nvc27t90vc895432986v30zz";
+  const postConfig = {
+    headers: { Authorization: `Bearer ${ticketapp_token}` }
+  };
+
+  const postBody = {
+    "Titolare": "LINEAAMICA",
+    "action": "query",
+    "Ambito": "FO",
+    "Cerca": query,
+    "Risultati": 3
+  };
+  axios
+    .post('http://lakb.s3c.it/s3netcm/KNOWLEDGE', postBody, postConfig)
+    .then(response => {
+      console.log('response.data:', response.data);
+      console.log('result:', response.data.Query[0]);
+      array.forEach(function (item, index) {
+        console.log(item, index);
+      });
+      res.send(response.data.Query);
+    })
+    .catch(error => {
+      console.error(error);
+    })
+});
+
+// Webhook endpoint for fallback-to-knowledge-base tutorial.
+// Just add a webhook on "Message.create" event targeting this
+// endpoint to see it in action.
+// This webhook will send an asynchronuos message to the user chat
+// if a fallback intent occurs on the chatbot.
+// After a fallback (or under an intent confidence threshold) this
+// snippet of code uses the original user question to trigger a
+// search on a knowledge base (wikipedia) sending back to the user
+// chat a set of results coming from the knowledge base (using url-buttons)
+app.post('/webhook/search', async (req, res) => {
+  console.log('tiledesk webhook. ', req.connection.remoteAddress);
+  //console.log('req.body ', JSON.stringify(req.body.payload.attributes));
+  res.send(200);
+  
+  var project_id = req.body.hook.id_project;
+  console.log('project_id ', project_id);
+
+  const payload = req.body.payload;
+
+  var sender_id = payload.sender; //"bot_" + bot._id;
+  console.log('sender_id ', sender_id);
+  
+  var senderFullname = payload.senderFullname; //bot.name;
+  console.log('senderFullname ', senderFullname);
+  
+  var token = req.body.token;
+  console.log('token ', token);
+  
+  var request_id = payload.recipient;
+  console.log('request_id ', request_id);
+
+  if (!req.body.payload.attributes.intent_info) {
+    return;
+  }
+
+  console.log("intent_info ok", req.body.payload.attributes.intent_info);
+
+  const is_fallback = req.body.payload.attributes.intent_info.is_fallback;
+  const intent_confidence = req.body.payload.attributes.intent_info.confidence;
+  console.log("INFO", req.body.payload.attributes.intent_info);
+  let confidence_threshold = 0.7;
+  console.log("confidence_threshold", confidence_threshold);
+  console.log("intent_confidence < confidence_threshold", intent_confidence < confidence_threshold)
+  if (is_fallback || (!is_fallback && intent_confidence < confidence_threshold)) {
+    console.log("starting Wikipedia search...");
+  }
+  else {
+    return;
+  }
+  
+  var question_payload = req.body.payload.attributes.intent_info.question_payload;
+  console.log("question_payload", question_payload)
+  var text = question_payload.text;
+  console.log('text ', text);
+
+  const search = new Elastic()
+  search.doQuery(text, (err, results) => {
+    // ex. results:
+    // [{
+    //   "title": "Teams",
+    //   "path": "https://digitalbrickoffice365.sharepoint.com/SitePages/Teams.aspx"
+    // }, {
+    //   "title": "Teams",
+    //   "path": "https://digitalbrickoffice365.sharepoint.com/SitePages/Microsoft-Teams-prova.aspx"
+    // }]
+    let attributes = {
+      attachment: {
+          type:"template",
+          buttons: []
+      }
+    };
+    // it creates a set of URL-buttons for the resultset
+    results.forEach(content => {
+      var button = {type:"url", value: content.title, link: content.path}
+      attributes.attachment.buttons.push(button);
+    });
+    var msg = {
+      text: 'You can be interested in this articles on Wikipedia',
+      sender: sender_id,
+      senderFullname: senderFullname,
+      attributes: attributes
+    };
+    const tdclient = new TiledeskClient(
+      {
+        APIKEY: '__APIKEY__',
+        project_id: project_id,
+        token: token,
+        APIURL: 'https://tiledesk-server-pre.herokuapp.com',
+        log: false
+      });
+    if (attributes.attachment.buttons.length > 0) {
+      tdclient.sendMessage(request_id, msg, function(err, result) {
+        console.log("err?", err);
+      });
+    }
+  });
+ });
+ 
 app.get('/', (req, res) => {
   res.send('Hello Tiledesk Widget app!');
 });
