@@ -22,7 +22,7 @@ class Elastic {
 
   doQuery(query, callback) {
     console.log("QUERY", query)
-    ticketapp_token = "aahfiudsbigshfdgiufhgisjhofshofdpgoiewurfu9845729483t9543nvc27t90vc895432986v30zz";
+    const ticketapp_token = "aahfiudsbigshfdgiufhgisjhofshofdpgoiewurfu9845729483t9543nvc27t90vc895432986v30zz";
     const postConfig = {
       headers: { Authorization: `Bearer ${ticketapp_token}` }
     };
@@ -38,18 +38,16 @@ class Elastic {
     .post('http://lakb.s3c.it/s3netcm/KNOWLEDGE', postBody, postConfig)
     .then(response => {
       console.log('response.data:', response.data);
-      console.log('result:', response.data.Query[0]);
-      array.forEach(function (item, index) {
-        console.log(item, index);
-      });
       if (callback) {
         let results = [];
         if (response.data && response.data.Query && response.data.Query.length > 0) {
           const values = response.data.Query;
           for (let i = 0; i < values.length; i++) {
-            console.log("title:", values['Titolo']);
-            console.log("id:", values['ID']);
-            results.push({title: values['Titolo'], path: 'https://host.it/' + values['ID']});
+            const title = values[i]['Titolo'];
+            const id = values[i]['ID'];
+            console.log("title:", title);
+            console.log("id:", id);
+            results.push({title: title, path: 'https://lineaamica.azurewebsites.net/risultati-di-ricerca/d/' + id});
             console.log("results", results);
           }
         }

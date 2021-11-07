@@ -102,9 +102,9 @@ app.get('/apps/prechatform/:messageid', (req, res) => {
     <p>Ti stiamo mettendo in contatto con un operatore.</p>
     <p>Prima di proseguire puoi fornirci alcuni dati?</p>
     <table>
-    <tr><td>Nome:</td><td><input type='text' id='name' value=''/></td></tr>
-    <tr><td>Email:</td><td><input type='text' id='email' value=''/></td></tr>
-    <tr><td colspan="2"><br>Dichiaro di aver letto e di accettare i termini della Vostra <a href="">privacy policy</a><input type='checkbox' id='privacy' value=''/></td></tr>
+    <tr><td id='name_section'>Nome:</td><td><input type='text' id='name' value=''/></td></tr>
+    <tr><td id='email_section'>Email:</td><td><input type='text' id='email' value=''/></td></tr>
+    <tr><td colspan="2" id="privacy_section"><br>Dichiaro di aver letto e di accettare i termini della Vostra <a href="">privacy policy</a><input type='checkbox' id='privacy' value=''/></td></tr>
     </table>
     
     <input type='hidden' id='messageid' value='${messageid}'/>
@@ -142,16 +142,49 @@ app.get('/apps/prechatform/:messageid', (req, res) => {
     }
     btn.addEventListener( 'click', function() {
       
+      let error = false;
+      let originalbgcolor;
       const email = document.getElementById('email');
+      if (email.value.trim().length == 0) {
+        error = true;
+        console.log("Email error.");
+        const email_section = document.getElementById('email_section');
+        email_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        email_section.style.backgroundColor = '';
+      }
+
       const name = document.getElementById('name');
-      
+      if (name.value.trim().length == 0) {
+        error = true;
+        console.log("Name error.");
+        const name_section = document.getElementById('name_section');
+        name_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        name_section.style.backgroundColor = '';
+      }
+
+      const privacy = document.getElementById('privacy');
+      if (!privacy.checked) {
+        error = true;
+        console.log("Accept privacy please.");
+        const privacy_section = document.getElementById('privacy_section');
+        privacy_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        privacy_section.style.backgroundColor = '';
+      }
+
+      if (error) {
+        return;
+      }
       
       const messageid = document.getElementById('messageid');
       sendData( {
         email:email.value,
         name:name.value,
-        
-        
         messageid:messageid.value} );
     } )
   </script>
@@ -279,22 +312,23 @@ app.get('/apps/ticket/:messageid', (req, res) => {
 <table>
 <tbody>
   <tr>
-    <td>
+    <td id='nome_section'>
       <input class="input_form" type='text' id='nome' value=''/ placeholder='Nome'>
     </td>
-    <td >
+    <td id='cognome_section'>
       <input class="input_form" type='text' id='cognome' value=''/ placeholder='Cognome'>
     </td>
   </tr>
   <tr>
-    <td>
+    <td id='email_section'>
       <input  class="input_form" type='text' id='email' value='' placeholder='Email'>
     </td>
-    <td >
-      <input  class="input_form" type='text' id='cellulare' value='' placeholder='Cellulare'>
+    <td id='cellulare_section'>
+      <input class="input_form" type='text' id='cellulare' value='' placeholder='Cellulare'>
     </td>
   </tr>
-  <tr><td colspan="2">Descrivi il tuo problema:</td></tr>
+  <tr>
+    <td colspan="2" id='note_section'>Descrivi il tuo problema:</td></tr>
   <tr>
     <td colspan="2">
       <textarea id='note' value=''/></textarea>
@@ -302,7 +336,7 @@ app.get('/apps/ticket/:messageid', (req, res) => {
   </tr>
 </tbody>
 </table>
-    <label for="privacy">Ho letto e accetto i termini della Vostra <a href="https://tiledesk.com/privacy.html" target="_blank">privacy policy</a></label>
+    <label for="privacy" id='privacy_section'>Ho letto e accetto i termini della Vostra <a href="https://tiledesk.com/privacy.html" target="_blank">privacy policy</a></label>
     <input type='checkbox' id='privacy' value=''/>
     <input type='hidden' id='messageid' value='${messageid}'/>
     <p style='text-align:center'><input type='button' id='send_btn' value='Crea Ticket'/></p>
@@ -332,11 +366,84 @@ app.get('/apps/ticket/:messageid', (req, res) => {
     }
     const btn = document.getElementById('send_btn');
     btn.addEventListener( 'click', function() {
+
+      let error = false;
+      let originalbgcolor;
       const email = document.getElementById('email');
-      const cellulare = document.getElementById('cellulare');
+      if (email.value.trim().length == 0) {
+        error = true;
+        console.log("Email error.");
+        const email_section = document.getElementById('email_section');
+        email_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        email_section.style.backgroundColor = '';
+      }
+
       const nome = document.getElementById('nome');
+      if (nome.value.trim().length == 0) {
+        error = true;
+        console.log("nome error.");
+        const nome_section = document.getElementById('nome_section');
+        nome_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        nome_section.style.backgroundColor = '';
+      }
+
       const cognome = document.getElementById('cognome');
+      if (cognome.value.trim().length == 0) {
+        error = true;
+        console.log("cognome error.");
+        const cognome_section = document.getElementById('cognome_section');
+        cognome_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        cognome_section.style.backgroundColor = '';
+      }
+
+      const cellulare = document.getElementById('cellulare');
+      if (cellulare.value.trim().length == 0) {
+        error = true;
+        console.log("cellulare error.");
+        const cellulare_section = document.getElementById('cellulare_section');
+        cellulare_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        cellulare_section.style.backgroundColor = '';
+      }
+
       const note = document.getElementById('note');
+      if (note.value.trim().length == 0) {
+        error = true;
+        console.log("note error.");
+        const note_section = document.getElementById('note_section');
+        note_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        note_section.style.backgroundColor = '';
+      }
+
+      const privacy = document.getElementById('privacy');
+      if (!privacy.checked) {
+        error = true;
+        console.log("Accept privacy please.");
+        const privacy_section = document.getElementById('privacy_section');
+        privacy_section.style.backgroundColor = '#FF603E';
+      }
+      else {
+        privacy_section.style.backgroundColor = '';
+      }
+
+      if (error) {
+        return;
+      }
+
+      //const email = document.getElementById('email');
+      //const cellulare = document.getElementById('cellulare');
+      //const nome = document.getElementById('nome');
+      //const cognome = document.getElementById('cognome');
+      //const note = document.getElementById('note');
       
       const messageid = document.getElementById('messageid');
       sendData( {
@@ -524,8 +631,10 @@ app.get('/search', (req, res) => {
 // After a fallback (or under an intent confidence threshold) this
 // snippet of code uses the original user question to trigger a
 // search on a knowledge base (wikipedia) sending back to the user
-// chat a set of results coming from the knowledge base (using url-buttons)
+// chat a set of results coming from the knowledge base (rendered with url-buttons)
 app.post('/webhook/search', async (req, res) => {
+  console.log("req.headers:", req.headers);
+  //const origin = req.headers['origin'];
   console.log('tiledesk webhook. ', req.connection.remoteAddress);
   //console.log('req.body ', JSON.stringify(req.body.payload.attributes));
   res.send(200);
@@ -560,7 +669,7 @@ app.post('/webhook/search', async (req, res) => {
   console.log("confidence_threshold", confidence_threshold);
   console.log("intent_confidence < confidence_threshold", intent_confidence < confidence_threshold)
   if (is_fallback || (!is_fallback && intent_confidence < confidence_threshold)) {
-    console.log("starting Wikipedia search...");
+    console.log("starting Elastic search...");
   }
   else {
     return;
@@ -573,6 +682,7 @@ app.post('/webhook/search', async (req, res) => {
 
   const search = new Elastic()
   search.doQuery(text, (err, results) => {
+    console.log("got elastic results:", results);
     // ex. results:
     // [{
     //   "title": "Teams",
@@ -589,27 +699,75 @@ app.post('/webhook/search', async (req, res) => {
     };
     // it creates a set of URL-buttons for the resultset
     results.forEach(content => {
+      console.log("CONTENT:", content);
       var button = {type:"url", value: content.title, link: content.path}
       attributes.attachment.buttons.push(button);
     });
+
+    let reply_text;
+    if (is_fallback) {
+      reply_text = 'Puoi provare con questi contenuti che potrebbero interessarti'
+    }
+    else {
+      reply_text = 'Altre informazioni interessanti'
+    }
     var msg = {
-      text: 'You can be interested in this articles on Wikipedia',
+      text: reply_text,
       sender: sender_id,
       senderFullname: senderFullname,
       attributes: attributes
     };
+    //req.body.origin = origin;
+    //API_URL = apiurlByOrigin(origin);
+    //console.log("Tiledesk endpoint: ", API_URL);
     const tdclient = new TiledeskClient(
       {
         APIKEY: '__APIKEY__',
         project_id: project_id,
         token: token,
-        APIURL: 'https://tiledesk-server-pre.herokuapp.com',
+        APIURL: 'https://api.tiledesk.com/v2',
         log: false
       });
+
     if (attributes.attachment.buttons.length > 0) {
-      tdclient.sendMessage(request_id, msg, function(err, result) {
-        console.log("err?", err);
-      });
+      setTimeout(() => {
+        tdclient.sendMessage(request_id, msg, (err, result) => {
+          console.log("err?", err);
+          setTimeout(() => {
+            let _attributes = {
+              attachment: {
+                type:"template",
+                buttons: [
+                  {
+                    type: "action",
+                    value: "OK",
+                    action: "OK",
+                    show_reply: false
+                  },
+                  {
+                    type: "action",
+                    value: "Non ho capito",
+                    action: "NO_CAPITO",
+                    show_reply: false
+                  }
+                ]
+              }
+            };
+            var _msg = {
+              text: "Sei soddisfatto della risposta?",
+              sender: sender_id,
+              senderFullname: senderFullname,
+              attributes: _attributes
+            };
+            tdclient.sendMessage(request_id, _msg, (err, result) => {
+              
+              
+              
+            });
+          }, 2000);
+        });
+      }, 2000);
+      
     }
   });
  });
