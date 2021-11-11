@@ -47,7 +47,8 @@ class Elastic {
             const id = values[i]['ID'];
             console.log("title:", title);
             console.log("id:", id);
-            results.push({title: title, path: 'https://lineaamica.azurewebsites.net/risultati-di-ricerca/d/' + id});
+            // results.push({title: title, path: 'https://lineaamica.azurewebsites.net/risultati-di-ricerca/d/' + id});
+            results.push({title: title, path: 'https://lineaamica.gov.it/risultati-di-ricerca/d/' + id});
             console.log("results", results);
           }
         }
