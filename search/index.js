@@ -27,6 +27,7 @@ class Elastic {
       headers: { Authorization: `Bearer ${ticketapp_token}` }
     };
 
+
     const postBody = {
       "Titolare": "LINEAAMICA",
       "action": "query",
