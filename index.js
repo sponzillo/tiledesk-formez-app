@@ -73,6 +73,29 @@ app.post('/mytiledesk', (req, res) => {
       }
     })
   }
+  else if (intent === 'supporto_al_cittadino') {
+    console.log("origin:", req.headers['origin']);
+    const origin = req.headers['origin'];
+    const request_id = req.body.payload.message.request.request_id;
+    const message_id = req.body.payload.message._id;
+    req.body.origin = origin;
+    db.set(message_id + "-webhook-body", req.body);
+    console.log("***** DB:", db);
+    API_URL = apiurlByOrigin(origin);
+    console.log("Tiledesk endpoint: ", API_URL);
+    const email = req.body.email;
+    const fullname = req.body.name;
+    const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
+    let message = {}
+    message['text'] = `tdFrame:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
+    console.log("message:", message);
+    message['attributes'] = {
+      hideTextReply: true,
+      typeMessagePlaceholder: 'Compila il form per chiedere supporto'
+    };
+    console.log("sending:", message)
+    res.json(message);
+  }
 });
 
 app.get('/apps/prechatform/:messageid', (req, res) => {
@@ -308,7 +331,7 @@ app.get('/apps/ticket/:messageid', (req, res) => {
   </head>
   <body>
   <div id="form">
-  <p style="text-align:center">Nessun operatore disponibile. Apriamo un ticket con il supporto?</p>
+  <p style="text-align:center">Inserisci la tua richiesta, ti risponderemo appena possibile</p>
 <table>
 <tbody>
   <tr>
@@ -529,7 +552,7 @@ app.post('/apps/ticket/create', (req, res) => {
       codtitolare: "LINEAAMICA",
       codcampagna: "FO",
       nome: nome,
-      Email: email,
+      email: email,
       codanagrafica: email,
       cognome: "",
       telefono: "",
@@ -539,7 +562,8 @@ app.post('/apps/ticket/create', (req, res) => {
       codoggetto: "PNRR",
       codrichiesta: "CHATBOT",
       codrisposta: "",
-      note: note
+      note: note,
+      sorgente:"chat"
     };
   axios
     .post('http://lakb.s3c.it/s3netcm/Ticketmanage', postBody, postConfig)
@@ -548,7 +572,7 @@ app.post('/apps/ticket/create', (req, res) => {
       const idticket = res.data.idticket;
       console.log("idticket:", res.data.idticket);
 
-      const text = "Grazie " + nome + ", il tuo **ticket #" + idticket + "** è stato inviato al supporto. Ti contatteremo presto all'indirizzo email *" + email + "*.\nDettaglio ticket inviato:\n\n" + note;
+      const text = "Grazie " + nome + ", il tuo **ticket #" + idticket + "** è stato inviato al supporto. Ti contatteremo presto all'indirizzo email *" + email + "*.\nDettaglio ticket inviato:\n\n" + note + "\n* Termina tdIntent:CLOSE";
       const reply = TiledeskChatbotUtil.parseReply(text);
       let message = reply.message;
       console.log("message:", message);
