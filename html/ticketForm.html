@@ -1,0 +1,233 @@
+<html>
+  <head>
+  <script>
+  </script>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
+*, *:after, *:before {
+  box-sizing: border-box;
+}
+body {
+  font-family: "DM Sans", sans-serif;
+  font-size: 12;
+  line-height: 1.5;
+  background-color: #F8F8FC;
+  padding: 0 1rem;
+}
+.card-form {
+  padding: 0rem 0rem 0;
+}
+.input {
+  display: flex;
+  flex-direction: column-reverse;
+  position: relative;
+  padding-top: 1.0rem;
+}
+.input + .input {
+  margin-top: 0rem;
+}
+.input-label {
+  color: #8597a3;
+  position: absolute;
+  top: 1.5rem;
+  transition: 0.25s ease;
+}
+.input-field {
+  border: 0;
+  z-index: 1;
+  background-color: transparent;
+  border-bottom: 1px solid #eee;
+  font: inherit;
+  padding: 0.25rem 0;
+}
+.input-field:focus, .input-field:valid {
+  outline: 0;
+  border-bottom-color: #6658d3;
+}
+.input-field:focus + .input-label, .input-field:valid + .input-label {
+  color: #6658d3;
+  transform: translateY(-1.5rem);
+}
+.action {
+  margin-top: 2rem;
+}
+.action-button {
+  font: inherit;
+  font-size: 1.00rem;
+  padding: 0.3em;
+  width: 100%;
+  font-weight: 500;
+  background-color: #6658d3;
+  border-radius: 16px;
+  color: #FFF;
+  border: 0;
+  cursor: pointer;
+}
+.action-button:focus {
+  outline: 0;
+}
+.action-button:hover {
+  box-shadow: rgba(0, 0, 0, 0.25) 0 8px 15px;
+  transform: translateY(-2px);
+}
+.action-button:active {
+  box-shadow: none;
+  transform: translateY(0);
+}
+  </style>
+  </head>
+  <body>
+  <div id="form" class="container">
+  <p style="text-align:center">Inserisci la tua richiesta, ti risponderemo appena possibile</p>
+
+      <div class="input">
+				<input type="text" class="input-field" id="nome" required/>
+				<label class="input-label">Nome</label>
+			</div>
+			
+      <div class="input">
+				<input type="text" class="input-field" id="cognome" required/>
+        <label class="input-label">Cognome</label>
+			</div>
+			
+      <div class="input">
+				<input type="text" class="input-field" id="email" required/>
+				<label class="input-label">Email</label>
+			</div>
+
+      <div class="input">
+				<input type="text" class="input-field" id="cellulare" required/>
+				<label class="input-label">Cellulare</label>
+			</div>
+
+      <div class="input">
+				<textarea class="input-field" id="note" required></textarea>
+				<label class="input-label">Descrivi il tuo problema</label>
+			</div>
+
+      <div class="input">
+        <label for="privacy" id='privacy_section' style="display: block;">
+          <input style='vertical-align: middle;position: relative;bottom: 1px;' type='checkbox' id='privacy' value=''/>
+          Accetto i termini della <a href="https://lineaamica.gov.it/privacy-policy" target="_blank">Privacy policy</a>
+        </label>
+      </div>
+
+    
+    
+    <input type='hidden' id='messageid' value='${messageid}'/>
+
+    <div class="action">
+			<button id='send_btn' class="action-button">Crea ticket</button>
+		</div>
+
+</div>
+  <script>
+    function sendData( data ) {
+      console.log( 'Sending data' );
+      const XHR = new XMLHttpRequest();
+      let urlEncodedData = "",
+          urlEncodedDataPairs = [],
+          name;
+      for( name in data ) {
+        urlEncodedDataPairs.push( encodeURIComponent( name ) + '=' + encodeURIComponent( data[name] ) );
+      }
+      urlEncodedData = urlEncodedDataPairs.join( '&' ).replace( /%20/g, '+' );
+      XHR.addEventListener("loadend", function(event) {
+        console.log( 'Data sent and response loaded.' );
+        let form = document.getElementById('form');
+        form.innerHTML = "<p style='text-align:center'>Grazie, ticket acquisito!</p>";
+      });
+      XHR.addEventListener( 'error', function(event) {
+        console.log( 'Oops! Something went wrong.' );
+      } );
+      XHR.open( 'POST', '/apps/ticket/create' );
+      XHR.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
+      XHR.send( urlEncodedData );
+    }
+    const btn = document.getElementById('send_btn');
+    btn.addEventListener( 'click', function() {
+
+      let error = false;
+      let originalbgcolor;
+      const email = document.getElementById('email');
+      if (email.value.trim().length == 0) {
+        error = true;
+        console.log("Email error.");
+        email.style.borderColor = '#FF603E';
+      }
+      else {
+        email.style.borderColor = '';
+      }
+
+      const nome = document.getElementById('nome');
+      if (nome.value.trim().length == 0) {
+        error = true;
+        console.log("nome error.");
+        nome.style.borderColor = '#FF603E';
+      }
+      else {
+        nome.style.borderColor = '';
+      }
+
+      const cognome = document.getElementById('cognome');
+      if (cognome.value.trim().length == 0) {
+        error = true;
+        console.log("cognome error.");
+        cognome.style.borderColor = '#FF603E';
+      }
+      else {
+        cognome.style.borderColor = '';
+      }
+
+      const cellulare = document.getElementById('cellulare');
+      if (cellulare.value.trim().length == 0) {
+        error = true;
+        console.log("cellulare error.");
+        cellulare.style.borderColor = '#FF603E';
+      }
+      else {
+        cellulare.style.borderColor = '';
+      }
+
+      const note = document.getElementById('note');
+      if (note.value.trim().length == 0) {
+        error = true;
+        console.log("note error.");
+        note.style.borderColor = '#FF603E';
+      }
+      else {
+        note.style.borderColor = '';
+      }
+
+      const privacy = document.getElementById('privacy');
+      if (!privacy.checked) {
+        error = true;
+        console.log("Accept privacy please.");
+        privacy.style.borderColor = '#FF603E';
+      }
+      else {
+        privacy.style.borderColor = '';
+      }
+
+      if (error) {
+        return;
+      }
+
+      //const email = document.getElementById('email');
+      //const cellulare = document.getElementById('cellulare');
+      //const nome = document.getElementById('nome');
+      //const cognome = document.getElementById('cognome');
+      //const note = document.getElementById('note');
+      
+      const messageid = document.getElementById('messageid');
+      sendData( {
+        email:email.value,
+        cellulare:cellulare.value,
+        nome:nome.value,
+        cognome:cognome.value,
+        note: note.value,
+        messageid:messageid.value} );
+    } )
+  </script>
+  </body>
+  </html>

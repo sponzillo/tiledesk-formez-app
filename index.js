@@ -6,6 +6,8 @@ const { TiledeskClient } = require('@tiledesk/tiledesk-client');
 const { TiledeskChatbotUtil } = require('@tiledesk/tiledesk-chatbot-util');
 const axios = require('axios');
 const { Elastic } = require('./search');
+var path = require("path");
+var fs = require('fs');
 
 const app = express();
 
@@ -14,7 +16,7 @@ app.use(bodyParser.urlencoded({ extended: true , limit: '50mb'}));
 
 let db = new Map();
 
-const APP_ENDPOINT = 'https://tiledesk-formez-app.andreasponziell.repl.co';
+const APP_ENDPOINT = process.env.APP_ENDPOINT;
 
 // Tiledesk Resolution-bot webhook endpoint
 app.post('/mytiledesk', (req, res) => {
@@ -50,11 +52,11 @@ app.post('/mytiledesk', (req, res) => {
         availability = false;
       }
       if (availability) {
-        message['text'] = `tdFrame:${APP_ENDPOINT}/apps/prechatform/${req.body.payload.message._id}\n* Ho cambiato idea`;
+        message['text'] = `tdFrame,h280:${APP_ENDPOINT}/apps/prechatform/${req.body.payload.message._id}\n* Ho cambiato idea`;
         console.log("message:", message);
         message['attributes'] = {
-          hideTextReply: true,
-          typeMessagePlaceholder: 'Compila il form prima di proseguire'
+          disableInputMessage: true,
+          inputMessagePlaceholder: 'Compila il form prima di proseguire'
         };
         console.log("sending:", message)
         res.json(message);
@@ -62,11 +64,11 @@ app.post('/mytiledesk', (req, res) => {
       else {
         console.log("CLOSED");
         // message['text'] = 'tdFrame:https://tiledesk-conversation-form-app.tiledesk.repl.co/apps/ticket/' + server + '/' + tokenalias + '/' + req.body.payload.message._id + '\n* Ho cambiato idea';
-        message['text'] = `tdFrame:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
+        message['text'] = `tdFrame,h410:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
         console.log("message:", message);
         message['attributes'] = {
-          hideTextReply: true,
-          typeMessagePlaceholder: 'Compila il form prima di proseguire'
+          disableInputMessage: true,
+          inputMessagePlaceholder: 'Compila il form prima di proseguire'
         };
         console.log("sending:", message)
         res.json(message);
@@ -87,11 +89,11 @@ app.post('/mytiledesk', (req, res) => {
     const fullname = req.body.name;
     const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
     let message = {}
-    message['text'] = `tdFrame:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
+    message['text'] = `tdFrame,h410:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
     console.log("message:", message);
     message['attributes'] = {
-      hideTextReply: true,
-      typeMessagePlaceholder: 'Compila il form per chiedere supporto'
+      disableInputMessage: true,
+      inputMessagePlaceholder: 'Compila il form prima di proseguire'
     };
     console.log("sending:", message)
     res.json(message);
@@ -101,142 +103,15 @@ app.post('/mytiledesk', (req, res) => {
 app.get('/apps/prechatform/:messageid', (req, res) => {
   const messageid = req.params.messageid;
   prechat_saved = db.get(messageid + '-prechat-saved');
-  let html = null;
   if (!prechat_saved) {
-    html = `
-  <html>
-  <head>
-  <script>
-  </script>
-  <style> 
-  p {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
-  }
-  td {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
-  }
-  input {
-    border: 1px solid #d9d9d9!important;border-radius: 5px;
-  }
-  </style>
-  </head>
-  <body>
-  <div id='form'>
-    <p>Ti stiamo mettendo in contatto con un operatore.</p>
-    <p>Prima di proseguire puoi fornirci alcuni dati?</p>
-    <table>
-    <tr><td id='name_section'>Nome:</td><td><input type='text' id='name' value=''/></td></tr>
-    <tr><td id='email_section'>Email:</td><td><input type='text' id='email' value=''/></td></tr>
-    <tr><td colspan="2" id="privacy_section"><br>Dichiaro di aver letto e di accettare i termini della Vostra <a href="">privacy policy</a><input type='checkbox' id='privacy' value=''/></td></tr>
-    </table>
-    
-    <input type='hidden' id='messageid' value='${messageid}'/>
-    
-    <p><input type='button' id='send_btn' value='Send'/></p>
-  </div>
-  <script>
-    const btn = document.getElementById('send_btn');
-    function sendData( data ) {
-      console.log( 'Sending data' );
-      const XHR = new XMLHttpRequest();
-      let urlEncodedData = "",
-          urlEncodedDataPairs = [],
-          name;
-      for( name in data ) {
-        urlEncodedDataPairs.push( encodeURIComponent( name ) + '=' + encodeURIComponent( data[name] ) );
-      }
-      urlEncodedData = urlEncodedDataPairs.join( '&' ).replace( /%20/g, '+' );
-      XHR.addEventListener("loadend", function(event) {
-        console.log( 'Data sent and response loaded.' );
-        let form = document.getElementById('form');
-        form.innerHTML = "<p style='text-align:center'>Grazie!</p>";
-      });
-      // XHR.addEventListener( 'load', function(event) {
-      //  console.log( 'Data sent and response loaded.' );
-      //  let form = document.getElementById('form');
-      //  form.innerHTML = "<p style='text-align:center'>Grazie!</p>";
-      // } );
-      XHR.addEventListener( 'error', function(event) {
-        console.log( 'Oops! Something went wrong.' );
-      } );
-      XHR.open( 'POST', '/apps/prechatform/save' );
-      XHR.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
-      XHR.send( urlEncodedData );
-    }
-    btn.addEventListener( 'click', function() {
-      
-      let error = false;
-      let originalbgcolor;
-      const email = document.getElementById('email');
-      if (email.value.trim().length == 0) {
-        error = true;
-        console.log("Email error.");
-        const email_section = document.getElementById('email_section');
-        email_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        email_section.style.backgroundColor = '';
-      }
-
-      const name = document.getElementById('name');
-      if (name.value.trim().length == 0) {
-        error = true;
-        console.log("Name error.");
-        const name_section = document.getElementById('name_section');
-        name_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        name_section.style.backgroundColor = '';
-      }
-
-      const privacy = document.getElementById('privacy');
-      if (!privacy.checked) {
-        error = true;
-        console.log("Accept privacy please.");
-        const privacy_section = document.getElementById('privacy_section');
-        privacy_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        privacy_section.style.backgroundColor = '';
-      }
-
-      if (error) {
-        return;
-      }
-      
-      const messageid = document.getElementById('messageid');
-      sendData( {
-        email:email.value,
-        name:name.value,
-        messageid:messageid.value} );
-    } )
-  </script>
-  </body>
-  </html>
-  `;
+    fs.readFile(path.join(__dirname + '/html/prechatForm.html'), (err, data) => {
+      let html = data.toString().replace('${messageid}', messageid);
+      res.status(200).send(html);
+    });
   }
   else {
-    html = `<html>
-  <head>
-  <script>
-  </script>
-  <style> 
-  p {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
+    res.sendFile(path.join(__dirname + '/html/prechatFormEnd.html'));
   }
-  td {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
-  }
-  input {
-    border: 1px solid #d9d9d9!important;border-radius: 5px;
-  }
-  </style>
-  </head>
-  <body>
-  <div>
-  <p style='text-align:center'>Grazie, i tuoi dati sono stati acquisiti.</p>`
-  }
-  res.status(200).send(html);
 });
 
 app.post('/apps/prechatform/save', (req, res) => {
@@ -304,206 +179,16 @@ app.post('/apps/prechatform/save', (req, res) => {
 
 app.get('/apps/ticket/:messageid', (req, res) => {
   const messageid = req.params.messageid;
-  //const server = req.params.server;
   ticket_request_saved = db.get(messageid + '-ticket-request-saved');
-  //console.log("server", req.params.server)
-  let html;
   if (!ticket_request_saved) {
-  html = `
-  <html>
-  <head>
-  <script>
-  </script>
-  <style>
-  #form {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:11px;color:#1a1a1a;font-weight:300;
-  }
-  td {
-    width: 1%;white-space: nowrap;font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:11px;color:#1a1a1a;font-weight:300;
-  }
-  .input_form {
-    width: 100%
-  }
-  textarea {
-    width: 100%
-  }
-  </style>
-  </head>
-  <body>
-  <div id="form">
-  <p style="text-align:center">Inserisci la tua richiesta, ti risponderemo appena possibile</p>
-<table>
-<tbody>
-  <tr>
-    <td id='nome_section'>
-      <input class="input_form" type='text' id='nome' value=''/ placeholder='Nome'>
-    </td>
-    <td id='cognome_section'>
-      <input class="input_form" type='text' id='cognome' value=''/ placeholder='Cognome'>
-    </td>
-  </tr>
-  <tr>
-    <td id='email_section'>
-      <input  class="input_form" type='text' id='email' value='' placeholder='Email'>
-    </td>
-    <td id='cellulare_section'>
-      <input class="input_form" type='text' id='cellulare' value='' placeholder='Cellulare'>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="2" id='note_section'>Descrivi il tuo problema:</td></tr>
-  <tr>
-    <td colspan="2">
-      <textarea id='note' value=''/></textarea>
-    </td>
-  </tr>
-</tbody>
-</table>
-    <label for="privacy" id='privacy_section'>Ho letto e accetto i termini della Vostra <a href="https://tiledesk.com/privacy.html" target="_blank">privacy policy</a></label>
-    <input type='checkbox' id='privacy' value=''/>
-    <input type='hidden' id='messageid' value='${messageid}'/>
-    <p style='text-align:center'><input type='button' id='send_btn' value='Crea Ticket'/></p>
-</div>
-  <script>
-    function sendData( data ) {
-      console.log( 'Sending data' );
-      const XHR = new XMLHttpRequest();
-      let urlEncodedData = "",
-          urlEncodedDataPairs = [],
-          name;
-      for( name in data ) {
-        urlEncodedDataPairs.push( encodeURIComponent( name ) + '=' + encodeURIComponent( data[name] ) );
-      }
-      urlEncodedData = urlEncodedDataPairs.join( '&' ).replace( /%20/g, '+' );
-      XHR.addEventListener("loadend", function(event) {
-        console.log( 'Data sent and response loaded.' );
-        let form = document.getElementById('form');
-        form.innerHTML = "<p style='text-align:center'>Grazie, ticket acquisito!</p>";
-      });
-      XHR.addEventListener( 'error', function(event) {
-        console.log( 'Oops! Something went wrong.' );
-      } );
-      XHR.open( 'POST', '/apps/ticket/create' );
-      XHR.setRequestHeader( 'Content-Type', 'application/x-www-form-urlencoded' );
-      XHR.send( urlEncodedData );
-    }
-    const btn = document.getElementById('send_btn');
-    btn.addEventListener( 'click', function() {
-
-      let error = false;
-      let originalbgcolor;
-      const email = document.getElementById('email');
-      if (email.value.trim().length == 0) {
-        error = true;
-        console.log("Email error.");
-        const email_section = document.getElementById('email_section');
-        email_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        email_section.style.backgroundColor = '';
-      }
-
-      const nome = document.getElementById('nome');
-      if (nome.value.trim().length == 0) {
-        error = true;
-        console.log("nome error.");
-        const nome_section = document.getElementById('nome_section');
-        nome_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        nome_section.style.backgroundColor = '';
-      }
-
-      const cognome = document.getElementById('cognome');
-      if (cognome.value.trim().length == 0) {
-        error = true;
-        console.log("cognome error.");
-        const cognome_section = document.getElementById('cognome_section');
-        cognome_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        cognome_section.style.backgroundColor = '';
-      }
-
-      const cellulare = document.getElementById('cellulare');
-      if (cellulare.value.trim().length == 0) {
-        error = true;
-        console.log("cellulare error.");
-        const cellulare_section = document.getElementById('cellulare_section');
-        cellulare_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        cellulare_section.style.backgroundColor = '';
-      }
-
-      const note = document.getElementById('note');
-      if (note.value.trim().length == 0) {
-        error = true;
-        console.log("note error.");
-        const note_section = document.getElementById('note_section');
-        note_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        note_section.style.backgroundColor = '';
-      }
-
-      const privacy = document.getElementById('privacy');
-      if (!privacy.checked) {
-        error = true;
-        console.log("Accept privacy please.");
-        const privacy_section = document.getElementById('privacy_section');
-        privacy_section.style.backgroundColor = '#FF603E';
-      }
-      else {
-        privacy_section.style.backgroundColor = '';
-      }
-
-      if (error) {
-        return;
-      }
-
-      //const email = document.getElementById('email');
-      //const cellulare = document.getElementById('cellulare');
-      //const nome = document.getElementById('nome');
-      //const cognome = document.getElementById('cognome');
-      //const note = document.getElementById('note');
-      
-      const messageid = document.getElementById('messageid');
-      sendData( {
-        email:email.value,
-        cellulare:cellulare.value,
-        nome:nome.value,
-        cognome:cognome.value,
-        note: note.value,
-        messageid:messageid.value} );
-    } )
-  </script>
-  </body>
-  </html>
-`;
+    fs.readFile(path.join(__dirname + '/html/ticketForm.html'), (err, data) => {
+      let html = data.toString().replace('${messageid}', messageid);
+      res.status(200).send(html);
+    });
   }
   else {
-    html = `<html>
-  <head>
-  <script>
-  </script>
-  <style> 
-  p {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
+    res.sendFile(path.join(__dirname + '/html/ticketEnd.html'));
   }
-  td {
-    font-family:Roboto,'Google Sans',Helvetica,Arial,sans-serif;font-size:12px;color:#1a1a1a;font-weight:300;
-  }
-  input {
-    border: 1px solid #d9d9d9!important;border-radius: 5px;
-  }
-  </style>
-  </head>
-  <body>
-  <div>
-  <p style='text-align:center'>Grazie, il tuo ticket è stato acquisito.</p>`
-  }
-  res.status(200).send(html);
 });
 
 app.post('/apps/ticket/create', (req, res) => {
