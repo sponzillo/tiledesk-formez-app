@@ -17,6 +17,7 @@ app.use(bodyParser.urlencoded({ extended: true , limit: '50mb'}));
 let db = new Map();
 
 const APP_ENDPOINT = process.env.APP_ENDPOINT;
+console.log("APP_ENDPOINT:", APP_ENDPOINT);
 
 // Tiledesk Resolution-bot webhook endpoint
 app.post('/mytiledesk', (req, res) => {
@@ -30,20 +31,26 @@ app.post('/mytiledesk', (req, res) => {
     intent = req.body.payload.intent.intent_display_name;
   }
   const projectId = req.body.payload.bot.id_project;
+  const token = req.body.token;
+  const requestId = req.body.payload.message.request.request_id;
+  const origin = req.headers['origin'];
   console.log("Got intent:", intent);
+  API_URL = apiurlByOrigin(origin);
+  console.log("Tiledesk endpoint: ", API_URL);
+  const tdclient = new TiledeskClient({projectId:projectId, token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
   if (intent === 'agent_handoff') {
     console.log("origin:", req.headers['origin']);
     const origin = req.headers['origin'];
-    const request_id = req.body.payload.message.request.request_id;
+    //const request_id = req.body.payload.message.request.request_id;
     const message_id = req.body.payload.message._id;
     req.body.origin = origin;
     db.set(message_id + "-webhook-body", req.body);
     console.log("***** DB:", db);
-    API_URL = apiurlByOrigin(origin);
-    console.log("Tiledesk endpoint: ", API_URL);
+    //API_URL = apiurlByOrigin(origin);
+    //console.log("Tiledesk endpoint: ", API_URL);
     const email = req.body.email;
     const fullname = req.body.name;
-    const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
+    //const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
     let message = {}
     tdclient.getWidgetSettings(function(err, result) {
       const users_available = result['user_available']
@@ -78,16 +85,15 @@ app.post('/mytiledesk', (req, res) => {
   else if (intent === 'supporto_al_cittadino') {
     console.log("origin:", req.headers['origin']);
     const origin = req.headers['origin'];
-    const request_id = req.body.payload.message.request.request_id;
+    //const request_id = req.body.payload.message.request.request_id;
     const message_id = req.body.payload.message._id;
     req.body.origin = origin;
     db.set(message_id + "-webhook-body", req.body);
     console.log("***** DB:", db);
-    API_URL = apiurlByOrigin(origin);
-    console.log("Tiledesk endpoint: ", API_URL);
-    const email = req.body.email;
-    const fullname = req.body.name;
-    const tdclient = new TiledeskClient({project_id:projectId,token:req.body.token, APIURL: API_URL, APIKEY: "___", log:false});
+    //API_URL = apiurlByOrigin(origin);
+    //console.log("Tiledesk endpoint: ", API_URL);
+    //const email = req.body.email;
+    //const fullname = req.body.name;
     let message = {}
     message['text'] = `tdFrame,h410:${APP_ENDPOINT}/apps/ticket/${req.body.payload.message._id}\n* Ho cambiato idea`;
     console.log("message:", message);
@@ -98,7 +104,87 @@ app.post('/mytiledesk', (req, res) => {
     console.log("sending:", message)
     res.json(message);
   }
+  else if (intent.startsWith('dipartimento')) {
+    changeDepartmentByName(projectId, requestId, token, origin, req.body.payload.intent.question.toLowerCase(), (err) => {
+      if (err) {
+        let message = {
+          text: "An error occurred while changing department: " + JSON.stringfy(err)
+        }
+        res.json(message);
+      }
+      else {
+        res.json(
+        {
+          text: "\\start",
+          attributes: {
+            subtype: 'info'
+          }
+        });
+      }
+    });
+  }
+  else if (intent === 'mainmenu') {
+    tdclient.sendSupportMessage(requestId, {text: req.body.payload.intent.answer}, (err) => {
+      if (err) {
+        console.log("Error sending message:", err);
+      }
+      changeDepartmentByName(projectId, requestId, token, origin, 'Default Department', (err) => {
+        if (err) {
+          let message = {
+            text: "Error changing department: " + JSON.stringfy(err)
+          }
+          res.json(message);
+        }
+        else {
+          res.json(
+          {
+            text: "\\start",
+            attributes: {
+              subtype: 'info'
+            }
+          });
+        }
+      });
+    });
+  }
+  else {
+    let message = {
+      text: `Intent **${intent}** non gestito`
+    }
+    res.json(message);
+  }
 });
+
+function changeDepartmentByName(projectId, requestId, token, origin, depName, callback) {
+  const tdclient = new TiledeskClient({projectId:projectId,token:token, APIURL: apiurlByOrigin(origin), APIKEY: "___"});
+  tdclient.getAllDepartments((err, deps) => {
+    console.log("deps:", deps, err);
+    if (err) {
+      console.error("getAllDepartments() error:", err);
+      callback(err);
+      return;
+    }
+    let dep = null;
+    for(i=0; i < deps.length; i++) {
+      d = deps[i];
+      if (d.name.toLowerCase() === depName.toLowerCase()) {
+        dep = d;
+        break;
+      }
+    }
+    if (dep) {
+      tdclient.updateRequestDepartment(requestId, dep._id, null, (err) => {
+        if (err) {
+          console.error("An error:", err);
+          callback(err);
+        }
+        else {
+          callback();
+        }
+      });
+    }
+  });
+}
 
 app.get('/apps/prechatform/:messageid', (req, res) => {
   const messageid = req.params.messageid;
