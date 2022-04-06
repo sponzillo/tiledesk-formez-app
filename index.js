@@ -225,7 +225,7 @@ app.post('/apps/prechatform/save', (req, res) => {
   const origin = message_webhook_body.origin;
   API_URL = apiurlByOrigin(origin);
   console.log("Tiledesk endpoint: ", API_URL);
-  const tdclient = new TiledeskClient({project_id:projectId,token:rawJwtToken, APIURL: API_URL, APIKEY: "___", log:false});
+  const tdclient = new TiledeskClient({projectId:projectId,token:rawJwtToken, APIURL: API_URL, APIKEY: "___", log:false});
   const lead_id = message_payload.message.request.lead._id;
   const requestid = message_payload.message.request.request_id;
   tdclient.updateLeadEmailFullname(lead_id, email, fullname, function(err, res, resbody) {
@@ -240,14 +240,14 @@ app.post('/apps/prechatform/save', (req, res) => {
   }
   message.attributes['updateUserEmail'] = email;
   message.attributes['updateUserFullname'] = fullname;
-  tdclient.sendMessage(requestid, message, function(err) {
+  tdclient.sendSupportMessage(requestid, message, function(err) {
     console.log('Sent message:', message);
     db.set(message_payload.message._id + '-prechat-saved', true);
     if (err) {
       console.log('An error occurred', err);
     }
     else {
-      tdclient.sendMessage(
+      tdclient.sendSupportMessage(
         requestid, {
           text:'\\agent',
           attributes: {
@@ -302,7 +302,7 @@ app.post('/apps/ticket/create', (req, res) => {
   const origin = message_webhook_body.origin;
   API_URL = apiurlByOrigin(origin);
   console.log("Tiledesk endpoint: ", API_URL);
-  const tdclient = new TiledeskClient({project_id:projectId,token:rawJwtToken, APIURL: API_URL, APIKEY: "___", log:false});
+  const tdclient = new TiledeskClient({projectId:projectId,token:rawJwtToken, APIURL: API_URL, APIKEY: "___", log:false});
   
   /*
   const lead_id = request.lead._id;
@@ -353,7 +353,7 @@ app.post('/apps/ticket/create', (req, res) => {
       message.attributes['updateUserEmail'] = email;
       message.attributes['updateUserFullname'] = nome;
       const requestid = message_payload.message.request.request_id;
-      tdclient.sendMessage(requestid, message, function(err) {
+      tdclient.sendSupportMessage(requestid, message, function(err) {
         console.log('Sent message:', message);
         db.set(message_payload.message._id + '-ticket-request-saved', true);
         if (err) {
@@ -518,7 +518,7 @@ app.post('/webhook/search', async (req, res) => {
     const tdclient = new TiledeskClient(
       {
         APIKEY: '__APIKEY__',
-        project_id: project_id,
+        projectId: project_id,
         token: token,
         APIURL: 'https://api.tiledesk.com/v2',
         log: false
@@ -526,7 +526,7 @@ app.post('/webhook/search', async (req, res) => {
 
     if (attributes.attachment.buttons.length > 0) {
       setTimeout(() => {
-        tdclient.sendMessage(request_id, msg, (err, result) => {
+        tdclient.sendSupportMessage(request_id, msg, (err, result) => {
           console.log("err?", err);
           setTimeout(() => {
             let _attributes = {
@@ -554,7 +554,7 @@ app.post('/webhook/search', async (req, res) => {
               senderFullname: senderFullname,
               attributes: _attributes
             };
-            tdclient.sendMessage(request_id, _msg, (err, result) => {
+            tdclient.sendSupportMessage(request_id, _msg, (err, result) => {
               
               
               
